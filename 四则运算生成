@@ -1,0 +1,181 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+
+#define MAX_OPERATORS 10
+#define MAX_EXPRESSION_LENGTH 100
+
+// 生成指定范围内的随机整数
+float random_number(float max) {
+    return (float)rand() / RAND_MAX * max;
+}
+
+// 在指定的运算符数组中随机选择一个运算符
+char random_operator(char operators[], int count) {
+    return operators[rand() % count];
+}
+
+// 计算表达式的结果
+float evaluate_expression(float a, char op, float b) {
+    switch (op) {
+    case '+':
+        return a + b;
+    case '-':
+        return a - b;
+    case '*':
+        return a * b;
+    case '/':
+        return a / b; // 此处不需要强制转换为浮点数，因为a和b已经是浮点数
+    default:
+        return 0.0;
+    }
+}
+
+// 生成带括号的四则运算表达式
+char* generate_expression_with_brackets(float max_num, int num, char operators[], int num_operators, int allow_decimal, float max_operand) {
+    char* expression = (char*)malloc(MAX_EXPRESSION_LENGTH * sizeof(char));
+    if (expression == NULL) {
+        printf("内存分配失败\n");
+        exit(1);
+    }
+
+    float a = random_number(max_operand);
+    float b = random_number(max_operand);
+    char op1 = random_operator(operators, num_operators);
+    char op2 = random_operator(operators, num_operators);
+
+    sprintf(expression, "%d. (%.2f %c %.2f) %c %.2f", num, a, op1, b, op2, random_number(max_num));
+    return expression;
+}
+
+// 生成不带括号的四则运算表达式
+char* generate_expression(float max_num, int num, char operators[], int num_operators, int allow_decimal, float max_operand) {
+    char* expression = (char*)malloc(MAX_EXPRESSION_LENGTH * sizeof(char));
+    if (expression == NULL) {
+        printf("内存分配失败\n");
+        exit(1);
+    }
+
+    float a = random_number(max_operand);
+    float b = random_number(max_operand);
+    char op = random_operator(operators, num_operators);
+
+    if (allow_decimal) {
+        float a_decimal = a / 10;
+        float b_decimal = b / 10;
+        sprintf(expression, "%d. %.2f %c %.2f", num, a_decimal, op, b_decimal);
+    }
+    else {
+        sprintf(expression, "%d. %.2f %c %.2f", num, a, op, b);
+    }
+
+    return expression;
+}
+
+int main() {
+    int num_questions, use_brackets, allow_decimal;
+    char operators[MAX_OPERATORS * 2]; // 支持多个运算符，每个运算符占两个字符的位置
+    char temp[MAX_OPERATORS * 2];
+    float max_num, max_operand;
+
+    srand(time(NULL)); // 设置随机数种子
+
+    // 获取用户输入：题目数量、是否使用括号、是否允许小数、最大数
+    printf("请输入题目数量：");
+    scanf("%d", &num_questions);
+
+    printf("请输入运算数的最大值：");
+    scanf("%f", &max_num);
+
+    printf("是否使用括号？（1 代表是，0 代表否）：");
+    scanf("%d", &use_brackets);
+
+    printf("是否允许小数？（1 代表是，0 代表否）：");
+    scanf("%d", &allow_decimal);
+
+    printf("请输入运算符 +, -, *, /，多个运算符用空格隔开：");
+    scanf(" %[^\n]s", temp); // 读取包含空格的字符串
+    strcpy(operators, strtok(temp, " ")); // 获取第一个运算符
+    while (strcmp(operators, "\n") != 0 && strcmp(operators, "\r\n") != 0) {
+        char* op = strtok(NULL, " ");
+        if (op == NULL) break; // 如果没有更多运算符，则退出循环
+        strcat(operators, op); // 追加运算符到运算符数组中
+    }
+
+    // 用户选择输出方式
+    char output_option;
+    printf("请选择输出方式（1表示终端，2表示文件）：");
+    scanf(" %c", &output_option);
+
+    // 生成题目并保存在数组中
+    char** expressions = (char**)malloc(num_questions * sizeof(char*));
+    if (expressions == NULL) {
+        printf("内存分配失败\n");
+        return 1;
+    }
+
+    int i;
+    for (i = 0; i < num_questions; i++) {
+        if (use_brackets) {
+            expressions[i] = generate_expression_with_brackets(max_num, i + 1, operators, strlen(operators), allow_decimal, max_num);
+        }
+        else {
+            expressions[i] = generate_expression(max_num, i + 1, operators, strlen(operators), allow_decimal, max_num);
+        }
+    }
+
+    // 输出到文件或终端
+    FILE* output;
+    if (output_option == 2) {
+        output = fopen("output.txt", "w");
+        if (output == NULL) {
+            printf("无法打开文件。\n");
+            return 1;
+        }
+    }
+    else {
+        output = stdout; // 终端输出
+    }
+
+    // 显示题目
+    fprintf(output, "练习题目：\n");
+    for (i = 0; i < num_questions; i++) {
+        fprintf(output, "题目%s = ？\n", expressions[i]);
+    }
+
+    // 关闭文件流
+    if (output_option == 'F') {
+        fclose(output);
+    }
+
+    // 询问用户是否显示答案
+    int show_answers;
+    printf("是否显示答案？（1表示显示，0表示不显示）：");
+    scanf("%d", &show_answers);
+
+    // 显示答案
+    if (show_answers == 1) {
+        printf("答案：\n");
+        for (i = 0; i < num_questions; i++) {
+            float a = random_number(max_num);
+            float b = random_number(max_num);
+            char op1 = random_operator(operators, strlen(operators));
+            char op2 = random_operator(operators, strlen(operators));
+            float result = evaluate_expression(evaluate_expression(a, op1, b), op2, random_number(max_num));
+            printf("题目%d. %.2f\n", i + 1, result);
+        }
+    }
+
+    // 释放内存
+    for (i = 0; i < num_questions; i++) {
+        free(expressions[i]);
+    }
+    free(expressions);
+
+    printf("练习题已输出，程序结束\n");
+    system("pause");
+    return 0;
+}
+
